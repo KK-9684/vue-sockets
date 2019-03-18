@@ -7,7 +7,7 @@ const http = require('http');
 const socketio = require('socket.io');
 const history = require('connect-history-api-fallback');
 
-const db = require('monk')('localhost:27017/smash');
+const db = require('monk/index')('localhost:27017/smash');
 
 const app = express();
 const server = http.Server(app);
