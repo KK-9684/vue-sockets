@@ -15,6 +15,8 @@
     "express": "^4.16.4",
     "foundation-sites": "^6.5.3",
     "lodash": "^4.17.11",
+    "mongodb": "^3.1.13",
+    "monk": "^6.0.6",
     "motion-ui": "^2.0.3",
     "socket.io": "^2.2.0",
     "unique-names-generator": "^2.0.1",

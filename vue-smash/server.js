@@ -7,6 +7,8 @@ const http = require('http');
 const socketio = require('socket.io');
 const history = require('connect-history-api-fallback');
 
+const db = require('monk')('localhost:27017/smash');
+
 const app = express();
 const server = http.Server(app);
 const io = socketio(server);
@@ -27,7 +29,12 @@ server.listen(PORT, function() {
   console.log(`Listening on *:${PORT}`);
 });
 
+db.then(() => {
+  console.log('MongoDB connected.');
+});
+
 const state = {};
+const rooms = db.get('rooms');
 
 // Socket stuff
 io.sockets.on('connection', socket => {
@@ -36,38 +43,60 @@ io.sockets.on('connection', socket => {
   /**
    * Unique urls are "rooms" on our state
    */
-  socket.on('ROOM_JOIN', ({ room }) => {
+  socket.on('ROOM_JOIN', async ({ room }) => {
     // Create room if joining first time
-    if (!state[room]) {
-      state[room] = {
-        activePlayer: '',
-        draftStarted: false,
-        players: [],
-        characters,
-      };
-    }
-    // Join and emit back to current socket the room state
-    socket.join(room).emit('ROOM_STATE', state[room]);
+    const roomState = await rooms.findOneAndUpdate(
+      { room },
+      {
+        $setOnInsert: {
+          room,
+          activePlayer: '',
+          draftStarted: false,
+          players: [],
+          characters,
+        },
+      },
+      { upsert: true }
+    );
+    // Emit to *just this new user* the new room state
+    socket.join(room).emit('ROOM_STATE', roomState);
   });
   /**
    * Add player and inform everyone
    */
-  socket.on('PLAYER_ADD', ({ room, payload: playerName }) => {
-    // Add player with starting shape
-    state[room].players.push({
-      name: playerName,
-      characters: [],
-    });
-    // Also set active for time being
-    state[room].activePlayer = playerName;
+  socket.on('PLAYER_ADD', async ({ room, payload: playerName }) => {
+    const roomState = await rooms.findOneAndUpdate(
+      { room },
+      {
+        // Add player with starting shape
+        $push: {
+          players: {
+            name: playerName,
+            characters: [],
+          },
+        },
+        // Also set active
+        $set: { activePlayer: playerName },
+      }
+    );
 
-    io.sockets.in(room).emit('ROOM_STATE', state[room]);
+    io.sockets.in(room).emit('ROOM_STATE', roomState);
   });
   /**
    * Shuffle players and inform everyone
    */
-  socket.on('PLAYERS_SHUFFLE', ({ room }) => {
-    state[room].players = _.shuffle(state[room].players);
+  socket.on('PLAYERS_SHUFFLE', async ({ room }) => {
+    // state[room].players = _.shuffle(state[room].players);
+
+    // fix this
+    const roomState = await rooms.findOneAndUpdate(
+      { room },
+      {
+        $set: {
+          players
+        }
+      }
+    );
 
     io.sockets.in(room).emit('ROOM_STATE', state[room]);
   });

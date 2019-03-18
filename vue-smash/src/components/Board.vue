@@ -188,7 +188,6 @@ export default {
   data() {
     return {
       playerName: '',
-      // room: 'awesome-superb-penguin',
       roomState: {
         players: [],
         characters: [],
