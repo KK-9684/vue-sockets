@@ -1,8 +1,0 @@
-.idea/
-.DS_Store
-node_modules/
-public/css/
-config/*
-!config/default.json
-
-example-foundation/
