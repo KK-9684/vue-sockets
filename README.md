@@ -1,18 +1,13 @@
-# vue-smash
-
-## Start server (from root)
-```
-node .
-```
+# Quote Racer
 
 ## Project setup
 ```
 npm install
 ```
 
-### Compiles and hot-reloads for development
+### Start server, ompiles and hot-reloads client for development
 ```
-npm run serve
+npm start
 ```
 
 ### Compiles and minifies for production
@@ -22,12 +17,17 @@ npm run build
 
 ### Run your tests
 ```
-npm run test
+npm test
 ```
 
 ### Lints and fixes files
 ```
 npm run lint
+```
+
+### Format code
+```
+npm run fmt
 ```
 
 ### Customize configuration
