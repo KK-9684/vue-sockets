@@ -1,16 +1,10 @@
 <template>
-  <div
-    class="card player"
-    :class="{
-      'player--owned': isOwned,
-      'player--current': isActive,
-    }"
-  >
-    <div class="card-section">
+  <div class="">
+    <div class="">
       <h4>{{ name }}</h4>
-      <div class="player-picker-outer">
+      <div class="">
         <button
-          class="player-picker button expanded"
+          class=""
           :class="{ hollow: isOwned }"
           @click="$emit('own-player', name)"
         >
@@ -18,9 +12,9 @@
         </button>
       </div>
 
-      <div class="player-roster-container">
-        <div class="player-roster">
-          <slot>Player characters go here</slot>
+      <div class="">
+        <div class="">
+          <slot></slot>
         </div>
       </div>
     </div>

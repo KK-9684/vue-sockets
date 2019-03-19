@@ -7,7 +7,7 @@ const http = require('http');
 const socketio = require('socket.io');
 const history = require('connect-history-api-fallback');
 
-const db = require('monk/index')('localhost:27017/smash');
+const db = require('monk')('localhost:27017/smash');
 
 const app = express();
 const server = http.Server(app);
@@ -86,68 +86,98 @@ io.sockets.on('connection', socket => {
    * Shuffle players and inform everyone
    */
   socket.on('PLAYERS_SHUFFLE', async ({ room }) => {
-    // state[room].players = _.shuffle(state[room].players);
+    const { players } = await rooms.findOne(
+      { room },
+      { players: 1 }
+    );
 
     // fix this
     const roomState = await rooms.findOneAndUpdate(
       { room },
       {
         $set: {
-          players
+          players: _.shuffle(players),
         }
       }
     );
 
-    io.sockets.in(room).emit('ROOM_STATE', state[room]);
+    io.sockets.in(room).emit('ROOM_STATE', roomState);
   });
   /**
    * Wipe all players
    */
-  socket.on('ROOM_RESET', ({ room }) => {
-    state[room].players = [];
-    state[room].draftStarted = false;
-    state[room].characters = characters;
+  socket.on('ROOM_RESET', async ({ room }) => {
+    const roomState = await rooms.findOneAndUpdate(
+      { room },
+      {
+        $set: {
+          players: [],
+          draftStarted: false,
+          characters,
+        }
+      }
+    );
 
-    io.sockets.in(room).emit('ROOM_STATE', state[room]);
+    io.sockets.in(room).emit('ROOM_STATE', roomState);
   });
   /**
    * Start draft
    */
-  socket.on('DRAFT_START', ({ room }) => {
-    state[room].draftStarted = true;
-    state[room].activePlayer = state[room].players[0].name;
+  socket.on('DRAFT_START', async ({ room }) => {
+    const { players } = await rooms.findOne(
+      { room },
+      'players'
+    );
 
-    io.sockets.in(room).emit('ROOM_STATE', state[room]);
+    const roomState = await rooms.findOneAndUpdate(
+      { room },
+      {
+        $set: {
+          draftStarted: true,
+          activePlayer: players[0].name,
+        },
+      }
+    );
+
+    io.sockets.in(room).emit('ROOM_STATE', roomState);
   });
   /**
    *
    * Add char to player
    */
-  socket.on('PLAYER_ADD_CHARACTER', ({ room, payload }) => {
+  socket.on('PLAYER_ADD_CHARACTER', async ({ room, payload }) => {
     const { charName, playerName } = payload;
-    const characters = state[room].characters;
+    const roomData = await rooms.findOne({ room });
+
+    const characters = roomData.characters;
 
     // Find char
     const char = characters.find(({ name }) => name === charName);
     // Add char to player
-    state[room].players
+    roomData.players
       .find(({ name }) => name === playerName)
       .characters.push(char);
     // Overwrite characters, removing selected char
-    state[room].characters = characters.filter(({ name }) => name !== charName);
+    roomData.characters = characters.filter(({ name }) => name !== charName);
 
     // Set next active player
-    const playerIndex = state[room].players.findIndex(
-      ({ name }) => name === state[room].activePlayer
+    const playerIndex = roomData.players.findIndex(
+      ({ name }) => name === roomData.activePlayer
     );
     // If last in array
-    state[room].activePlayer =
-      playerIndex === state[room].players.length - 1
+    roomData.activePlayer =
+      playerIndex === roomData.players.length - 1
         ? // then jump to first player
-          state[room].players[0].name
+        roomData.players[0].name
         : // otherwise next index in array
-          state[room].players[playerIndex + 1].name;
+        roomData.players[playerIndex + 1].name;
 
-    io.sockets.in(room).emit('ROOM_STATE', state[room]);
+    // Update db and return new value
+    const roomState = await rooms.findOneAndUpdate(
+      { room },
+      roomData
+    );
+
+    io.sockets.in(room).emit('ROOM_STATE', roomState);
   });
 });
